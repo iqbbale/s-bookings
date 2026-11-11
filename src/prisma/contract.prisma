@@ -1,0 +1,714 @@
+// use prisma-8
+
+// ---------//----------
+// USER & AUTHENTICATION
+model User {
+  id                     Uuid                           @id @onCreate(uuid())
+  name                   Varchar(150)
+  email                  Varchar(255)                   @unique
+  phone                  Varchar(20)
+  emailVerifiedAt        DateTime?                      @map("email_verified_at")
+  passwordHash           Varchar(100)                   @map("password_hash")
+  avatarUrl              Text?                          @map("avatar_url")
+  isActive               Boolean                        @default(true) @map("is_active")
+  createdAt              DateTime                       @default(now()) @map("created_at")
+  updatedAt              DateTime                       @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  // Relations
+  authAccounts           AuthAccounts[]
+  sessions               Sessions[]
+  userRoles              UserRoles[]
+  ownerProfiles          OwnerProfiles?
+  staffAssignments       StaffAssignments[]
+  customerBookings       Bookings[]                     @relation("CustomerBookings")
+  createdBookings        Bookings[]                     @relation("CreatedBookings")
+  receivedPayments       Bookings[]                     @relation("ReceivedPayments")
+  bookingStatusHistories BookingStatusHistories[]
+  requestedChanges       BookingChangeRequests[]        @relation("RequestedByUser")
+  reviewedChanges        BookingChangeRequests[]        @relation("ReviewedByUser")
+  receivedTransactions   PaymentTransactions[]          @relation("PaymentReceivedByUser")
+  customerComplaints     Complaints[]                   @relation("CustomerUserComplaint")
+  handledComplaints      Complaints[]                   @relation("HandledByUser")
+  notifications          Notifications[]
+  auditLogs              AuditLogs[]
+  courtClosures          CourtClosures[]
+  reviewedVerifications  OwnerVerificationSubmissions[]
+
+  @@index([name])
+  @@map("users")
+}
+
+model AuthAccounts {
+  id                Uuid         @id @onCreate(uuid())
+  userId            Uuid         @map("user_id")
+  provider          Varchar(50)
+  providerAccountId Varchar(255) @map("provider_account_id")
+  accessToken       Text?        @map("access_token")
+  refreshToken      Text?        @map("refresh_token")
+  expiresAt         Int?         @map("expires_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  // FK
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+model Sessions {
+  id           Uuid         @id @onCreate(uuid())
+  userId       Uuid         @map("user_id")
+  sessionToken Text         @unique @map("session_token")
+  userAgent    Text?        @map("user_agent")
+  ipAddress    Varchar(45)? @map("ip_address")
+  expiresAt    DateTime     @map("expires_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  // FK
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+enum ROLE {
+  CUSTOMER
+  OWNER
+  STAFF
+  ADMIN
+}
+
+model UserRoles {
+  id     Uuid @id @onCreate(uuid())
+  userId Uuid @map("user_id")
+  role   ROLE
+
+  // FK
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+// ----------//------------
+// OWNER & STAFF MANAGEMENT
+enum VERIFICATION {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model OwnerProfiles {
+  id                 Uuid                           @id @onCreate(uuid())
+  userId             Uuid                           @unique @map("user_id")
+  businessName       Varchar(150)                   @map("business_name")
+  businessAddress    Text                           @map("business_address")
+  latitude           NumericString(10, 7)
+  longitude          NumericString(10, 7)
+  verificationStatus VERIFICATION                   @default(PENDING) @map("verification_status")
+  createdAt          DateTime                       @default(now()) @map("created_at")
+  updatedAt          DateTime                       @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  // FK
+  user               User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  staffAssignments   StaffAssignments[]
+  facilities         Facilities[]
+  payouts            Payouts[]
+  verifications      OwnerVerificationSubmissions[]
+
+  @@index([userId, businessName])
+  @@map("owner_profiles")
+}
+
+enum STATUS {
+  ACTIVE
+  INACTIVE
+}
+
+model StaffAssignments {
+  id                         Uuid                         @id @onCreate(uuid())
+  ownerId                    Uuid                         @map("owner_id")
+  staffUserId                Uuid                         @map("staff_user_id")
+  status                     STATUS                       @default(ACTIVE)
+  startedAt                  DateTime                     @default(now()) @map("started_at")
+  endedAt                    DateTime?                    @map("ended_at")
+  createdAt                  DateTime                     @default(now()) @map("created_at")
+
+  // FK
+  ownerProfile               OwnerProfiles                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  staffUser                  User                         @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  staffAssignmentPermissions StaffAssignmentPermissions[]
+
+  @@unique([ownerId, staffUserId])
+  @@index([staffUserId])
+  @@map("staff_assignments")
+}
+
+enum PERMISSIONS {
+  MANAGE_BOOKING
+  CREATE_WALK_IN
+  RECEIVE_PAYMENT
+  MANAGE_CHECK_IN
+  VIEW_REPORTS
+}
+
+model StaffAssignmentPermissions {
+  id                Uuid             @id @onCreate(uuid())
+  staffAssignmentId Uuid             @map("staff_assignment_id")
+  permission        PERMISSIONS
+
+  // FK
+  staffAssignment   StaffAssignments @relation(fields: [staffAssignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([staffAssignmentId, permission])
+  @@map("staff_assignment_permissions")
+}
+
+// -----------//-------------
+// Facility & Court Management
+model Facilities {
+  id           Uuid                 @id @onCreate(uuid())
+  ownerId      Uuid                 @map("owner_id")
+  name         Varchar(150)
+  description  Text
+  address      Text
+  latitude     NumericString(10, 7)
+  longitude    NumericString(10, 7)
+  status       STATUS               @default(ACTIVE)
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  // FK
+  ownerProfile OwnerProfiles        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  courts       Courts[]
+
+  @@index([name, ownerId])
+  @@map("facilities")
+}
+
+model Courts {
+  id              Uuid              @id @onCreate(uuid())
+  facilityId      Uuid              @map("facility_id")
+  name            Varchar(150)
+  description     Text
+  capacity        Int
+  pricePerHour    BigInt            @map("price_per_hour")
+  status          STATUS            @default(ACTIVE)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  // FK
+  facility        Facilities        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  courtSportTypes CourtSportTypes[]
+  courtAmenities  CourtAmenities[]
+  courtImages     CourtImages[]
+  operatingHours  OperatingHours[]
+  courtClosures   CourtClosures[]
+  bookings        Bookings[]
+
+  @@index([name, facilityId])
+  @@map("courts")
+}
+
+model SportTypes {
+  id              Uuid              @id @onCreate(uuid())
+  name            Varchar(100)      @unique
+  description     Text
+
+  // RELATIONS
+  courtSportTypes CourtSportTypes[]
+
+  @@map("sport_types")
+}
+
+model CourtSportTypes {
+  courtId      Uuid       @map("court_id")
+  sportTypesId Uuid       @map("sport_types_id")
+
+  // FK
+  court        Courts     @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sportType    SportTypes @relation(fields: [sportTypesId], references: [id], onDelete: Cascade)
+
+  @@id([courtId, sportTypesId])
+  @@map("court_sport_types")
+}
+
+model Amenities {
+  id             Uuid             @id @onCreate(uuid())
+  name           Varchar(100)     @unique
+
+  // RELATIONS
+  courtAmenities CourtAmenities[]
+
+  @@map("amenities")
+}
+
+model CourtAmenities {
+  courtId   Uuid      @map("court_id")
+  amenityId Uuid      @map("amenity_id")
+
+  // FK
+  court     Courts    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  amenity   Amenities @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([courtId, amenityId])
+  @@map("court_amenities")
+}
+
+model CourtImages {
+  id        Uuid     @id @onCreate(uuid())
+  courtId   Uuid     @map("court_id")
+  imageUrl  Text     @map("image_url")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // FK
+  court     Courts   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+  @@map("court_images")
+}
+
+model OperatingHours {
+  id        Uuid    @id @onCreate(uuid())
+  courtId   Uuid    @map("court_id")
+  dayOfWeek Int     @map("day_of_week")
+  openTime  Time    @map("open_time")
+  closeTime Time    @map("close_time")
+  isClosed  Boolean @default(false) @map("is_closed")
+
+  // FK
+  court     Courts  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@unique([courtId, dayOfWeek])
+  @@map("operating_hours")
+}
+
+model CourtClosures {
+  id              Uuid     @id @onCreate(uuid())
+  courtId         Uuid     @map("court_id")
+  startAt         DateTime @map("start_at")
+  endAt           DateTime @map("end_at")
+  reason          Text
+  createdByUserId Uuid     @map("created_by_user_id")
+
+  // FK
+  court           Courts   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+  @@map("court_closures")
+}
+
+// -----------//-------------
+// Booking Management
+enum SOURCE {
+  ONLINE
+  WALK_IN
+}
+
+enum BOOKING_STATUS {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+model Bookings {
+  id                      Uuid                     @id @onCreate(uuid())
+  bookingCode             Varchar(30)              @unique @map("booking_code")
+  customerUserId          Uuid?                    @map("customer_user_id")
+  courtId                 Uuid                     @map("court_id")
+  createdByUserId         Uuid                     @map("created_by_user_id")
+  paymentReceivedByUserId Uuid?                    @map("payment_received_by_user_id")
+  source                  SOURCE                   @default(ONLINE)
+  customerName            Varchar(150)             @map("customer_name")
+  customerPhone           Varchar(20)              @map("customer_phone")
+  startedAt               DateTime                 @map("started_at")
+  endAt                   DateTime                 @map("end_at")
+  status                  BOOKING_STATUS
+  expiresAt               DateTime?                @map("expires_at")
+  confirmedAt             DateTime?                @map("confirmed_at")
+  priceSnapshot           BigInt                   @map("price_snapshot")
+  currency                Varchar(3)               @default("IDR")
+  amountDue               BigInt                   @map("amount_due")
+  amountPaid              BigInt                   @default(0) @map("amount_paid")
+  remainingAmount         BigInt                   @map("remaining_amount")
+  qrTokenHash             Varchar(255)?            @map("qr_token_hash")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  // FK
+  court                   Courts                   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  customerUser            User?                    @relation("CustomerBookings", fields: [customerUserId], references: [id])
+  createdByUser           User                     @relation("CreatedBookings", fields: [createdByUserId], references: [id])
+  paymentReceivedByUser   User?                    @relation("ReceivedPayments", fields: [paymentReceivedByUserId], references: [id])
+
+  // RELATIONS
+  bookingHistories        BookingStatusHistories[]
+  bookingChangeRequests   BookingChangeRequests[]
+  paymentAttempts         PaymentAttempts[]
+  paymentTransactions     PaymentTransactions[]
+  commissions             Commissions[]
+  complaints              Complaints[]
+
+  @@index([courtId, startedAt, endAt])
+  @@index([customerUserId])
+  @@map("bookings")
+}
+
+model BookingStatusHistories {
+  id              Uuid        @id @onCreate(uuid())
+  bookingId       Uuid        @map("booking_id")
+  oldStatus       Varchar(30) @map("old_status")
+  newStatus       Varchar(30) @map("new_status")
+  changedByUserId Uuid?       @map("changed_by_user_id")
+  note            Text?
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  // FK
+  booking         Bookings    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  changedByUser   User?       @relation(fields: [changedByUserId], references: [id])
+
+  @@index([bookingId])
+  @@map("booking_status_histories")
+}
+
+enum TYPE {
+  CANCEL
+  RESCHEDULE
+}
+
+enum CHANGE_REQUEST_STATUS {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model BookingChangeRequests {
+  id                Uuid                  @id @onCreate(uuid())
+  bookingId         Uuid                  @map("booking_id")
+  requestedByUserId Uuid                  @map("requested_by_user_id")
+  requestType       TYPE                  @map("request_type")
+  requestedStartAt  DateTime?             @map("requested_start_at")
+  requestedEndAt    DateTime?             @map("requested_end_at")
+  reason            Text
+  status            CHANGE_REQUEST_STATUS @default(PENDING)
+  reviewedByUserId  Uuid?                 @map("reviewed_by_user_id")
+  createdAt         DateTime              @default(now()) @map("created_at")
+
+  // FK
+  booking           Bookings              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  requestedUser     User                  @relation("RequestedByUser", fields: [requestedByUserId], references: [id])
+  reviewedByUser    User?                 @relation("ReviewedByUser", fields: [reviewedByUserId], references: [id])
+
+  @@index([bookingId])
+  @@index([requestedByUserId])
+  @@map("booking_change_requests")
+}
+
+// --------//---------
+// PAYMENT & FINANCE
+enum PAYMENT {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+model PaymentAttempts {
+  id                  Uuid                  @id @onCreate(uuid())
+  bookingId           Uuid                  @map("booking_id")
+  gateway             Varchar(50)
+  gatewayReference    Varchar(255)?         @map("gateway_reference")
+  amount              BigInt
+  status              PAYMENT               @default(PENDING)
+  expiresAt           DateTime              @map("expires_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+
+  // FK
+  booking             Bookings              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  paymentTransactions PaymentTransactions[]
+
+  @@index([bookingId])
+  @@index([gateway, gatewayReference])
+  @@map("payment_attempts")
+}
+
+enum STATUS_TRANSACTIONS {
+  ONLINE
+  ONSITE
+}
+
+enum METHOD_TRANSACTIONS {
+  TRANSFER
+  CASH
+  QRIS
+}
+
+enum STATUS_PAYMENT {
+  SUCCESS
+  FAILED
+}
+
+model PaymentTransactions {
+  id                   Uuid                @id @onCreate(uuid())
+  bookingId            Uuid                @map("booking_id")
+  paymentAttemptId     Uuid?               @map("payment_attempt_id")
+  channel              STATUS_TRANSACTIONS
+  method               METHOD_TRANSACTIONS
+  amount               BigInt
+  status               STATUS_PAYMENT
+  gatewayTransactionId Varchar(255)?       @map("gateway_transaction_id")
+  receivedByUserId     Uuid?               @map("received_by_user_id")
+  verifiedAt           DateTime?           @map("verified_at")
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  // FK
+  booking              Bookings            @relation(fields: [bookingId], references: [id])
+  paymentAttempt       PaymentAttempts?    @relation(fields: [paymentAttemptId], references: [id])
+  receivedByUser       User?               @relation("PaymentReceivedByUser", fields: [receivedByUserId], references: [id])
+
+  // RELATIONS
+  refunds              Refunds[]
+  commissions          Commissions[]
+  payoutAllocations    PayoutAllocations[]
+
+  @@index([bookingId])
+  @@index([receivedByUserId])
+  @@index([paymentAttemptId])
+  @@map("payment_transactions")
+}
+
+model WebhookEvents {
+  id              Uuid         @id @onCreate(uuid())
+  provider        Varchar(50)
+  providerEventId Varchar(255) @map("provider_event_id")
+  eventType       Varchar(100) @map("event_type")
+  payload         Jsonb
+  processedAt     DateTime?    @map("processed_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@unique([provider, providerEventId])
+  @@map("webhook_events")
+}
+
+enum STATUS_REFUNDS {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Refunds {
+  id                   Uuid                @id @onCreate(uuid())
+  paymentTransactionId Uuid                @map("payment_transaction_id")
+  amount               BigInt
+  reason               Text
+  status               STATUS_REFUNDS      @default(PENDING)
+  gatewayRefundId      Varchar(255)?       @map("gateway_refund_id")
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  // FK
+  paymentTransaction   PaymentTransactions @relation(fields: [paymentTransactionId], references: [id])
+
+  @@index([paymentTransactionId])
+  @@map("refunds")
+}
+
+enum STATUS_COMMISSION {
+  PENDING
+  SETTLED
+  REVERSED
+}
+
+model Commissions {
+  id                   Uuid                @id @onCreate(uuid())
+  bookingId            Uuid                @map("booking_id")
+  paymentTransactionId Uuid                @map("payment_transaction_id")
+  commissionRate       NumericString(5, 2) @map("commission_rate")
+  amount               BigInt
+  status               STATUS_COMMISSION   @default(PENDING)
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  // FK
+  booking              Bookings            @relation(fields: [bookingId], references: [id])
+  paymentTransaction   PaymentTransactions @relation(fields: [paymentTransactionId], references: [id])
+
+  @@index([bookingId])
+  @@index([paymentTransactionId])
+  @@map("commissions")
+}
+
+enum STATUS_PAYOUTS {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+model Payouts {
+  id                Uuid                @id @onCreate(uuid())
+  ownerId           Uuid                @map("owner_id")
+  amount            BigInt
+  status            STATUS_PAYOUTS      @default(PENDING)
+  reference         Varchar(255)?
+  paidAt            DateTime?           @map("paid_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  // FK
+  owner             OwnerProfiles       @relation(fields: [ownerId], references: [id])
+
+  // RELATIONS
+  payoutAllocations PayoutAllocations[]
+
+  @@index([ownerId])
+  @@map("payouts")
+}
+
+model PayoutAllocations {
+  id                   Uuid                @id @onCreate(uuid())
+  payoutId             Uuid                @map("payout_id")
+  paymentTransactionId Uuid                @map("payment_transaction_id")
+  amount               BigInt
+
+  // FK
+  payout               Payouts             @relation(fields: [payoutId], references: [id])
+  paymentTransaction   PaymentTransactions @relation(fields: [paymentTransactionId], references: [id])
+
+  @@index([payoutId])
+  @@index([paymentTransactionId])
+  @@map("payout_allocations")
+}
+
+// ---------------//--------------------
+// VERIFICATION, COMPLAIN & NOTIFICATION
+enum STATUS_VERIFICATION {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model OwnerVerificationSubmissions {
+  id               Uuid                         @id @onCreate(uuid())
+  ownerId          Uuid                         @map("owner_id")
+  status           STATUS_VERIFICATION          @default(PENDING)
+  reviewedByUserId Uuid?                        @map("reviewed_by_user_id")
+  reviewNote       Text?                        @map("review_note")
+  submittedAt      DateTime                     @default(now()) @map("submitted_at")
+  reviewedAt       DateTime?                    @map("reviewed_at")
+
+  // FK
+  owner            OwnerProfiles                @relation(fields: [ownerId], references: [id])
+  reviewedByUser   User?                        @relation(fields: [reviewedByUserId], references: [id])
+
+  // RELATIONS
+  documents        OwnerVerificationDocuments[]
+
+  @@index([ownerId])
+  @@index([reviewedByUserId])
+  @@map("owner_verification_submissions")
+}
+
+model OwnerVerificationDocuments {
+  id           Uuid                         @id @onCreate(uuid())
+  submissionId Uuid                         @map("submission_id")
+  documentType Varchar(50)                  @map("document_type")
+  storageKey   Text                         @map("storage_key")
+  uploadedAt   DateTime                     @default(now()) @map("uploaded_at")
+
+  // FK
+  submission   OwnerVerificationSubmissions @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("owner_verification_documents")
+}
+
+enum STATUS_COMPLAINTS {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+model Complaints {
+  id             Uuid                   @id @onCreate(uuid())
+  bookingId      Uuid                   @map("booking_id")
+  customerUserId Uuid                   @map("customer_user_id")
+  description    Text
+  status         STATUS_COMPLAINTS      @default(OPEN)
+  handleByUserId Uuid?                  @map("handle_by_user_id")
+  resolutionNote Text?                  @map("resolution_note")
+  createdAt      DateTime               @default(now()) @map("created_at")
+
+  // FK
+  booking        Bookings               @relation(fields: [bookingId], references: [id])
+  customerUser   User                   @relation("CustomerUserComplaint", fields: [customerUserId], references: [id])
+  handledByUser  User?                  @relation("HandledByUser", fields: [handleByUserId], references: [id])
+
+  // RELATIONS
+  attachments    ComplaintAttachments[]
+
+  @@index([bookingId])
+  @@index([customerUserId])
+  @@index([handleByUserId])
+  @@map("complaints")
+}
+
+model ComplaintAttachments {
+  id          Uuid       @id @onCreate(uuid())
+  complaintId Uuid       @map("complaint_id")
+  fileUrl     Text       @map("file_url")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  // FK
+  complaint   Complaints @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@index([complaintId])
+  @@map("complaint_attachments")
+}
+
+model Notifications {
+  id        Uuid         @id @onCreate(uuid())
+  userId    Uuid         @map("user_id")
+  title     Varchar(150)
+  message   Text
+  type      Varchar(50)
+  isRead    Boolean      @default(false) @map("is_read")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  // FK
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model AuditLogs {
+  id          Uuid         @id @onCreate(uuid())
+  actorUserId Uuid?        @map("actor_user_id")
+  action      Varchar(100)
+  entityType  Varchar(100) @map("entity_type")
+  entityId    Uuid         @map("entity_id")
+  metadata    Jsonb
+  ipAddress   Inet?        @map("ip_address")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  // FK
+  actorUser   User?        @relation(fields: [actorUserId], references: [id])
+
+  @@index([actorUserId])
+  @@index([entityId])
+  @@index([action, entityType])
+  @@map("audit_logs")
+}
