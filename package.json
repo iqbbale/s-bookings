@@ -13,6 +13,7 @@
     "@base-ui/react": "^1.9.0",
     "@hookform/resolvers": "^7.0.5",
     "@prisma/orm-postgres": "8.0.0-rc.23",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "dotenv": "^18.0.10",

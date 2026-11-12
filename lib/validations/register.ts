@@ -35,4 +35,4 @@ export const register = z
     path: ["confirmPassword"],
   });
 
-export type typeRegister = z.infer<typeof register>;
+export type registerSchema = z.infer<typeof register>;

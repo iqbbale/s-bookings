@@ -17,18 +17,30 @@ import { login, type loginSchema } from "@/lib/validations/login";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaGoogle } from "react-icons/fa";
+import { useToast } from "@/hooks/toast";
+import { submitLogin } from "@/app/(auth)/login/actions";
 
 export function CardLogin() {
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<loginSchema>({
     resolver: zodResolver(login),
   });
 
-  const onSubmit = (d: any) => {
-    return console.log(d);
+  const { message, showToast } = useToast();
+
+  const onSubmit = async (data: loginSchema) => {
+    const result = await submitLogin(data);
+
+    if (!result.success) {
+      showToast(result.message ?? "SUCCESS");
+      reset();
+    } else {
+      showToast(result.message ?? "Email Or Password Wrong");
+    }
   };
   return (
     <Card className="w-full max-w-sm">
@@ -85,6 +97,11 @@ export function CardLogin() {
                 </p>
               )}
             </div>
+            {message && (
+              <div className="p-3 bg-green-100 text-green-800 rounded mb-4 max-w-fulls">
+                {message}
+              </div>
+            )}
           </div>
         </form>
       </CardContent>
