@@ -4,11 +4,11 @@
 // USER & AUTHENTICATION
 model User {
   id                     Uuid                           @id @onCreate(uuid())
-  name                   Varchar(150)
+  name                   Varchar(150)?
   email                  Varchar(255)                   @unique
-  phone                  Varchar(20)
+  phone                  Varchar(20)?
   emailVerifiedAt        DateTime?                      @map("email_verified_at")
-  passwordHash           Varchar(100)                   @map("password_hash")
+  passwordHash           Varchar(100)?                  @map("password_hash")
   avatarUrl              Text?                          @map("avatar_url")
   isActive               Boolean                        @default(true) @map("is_active")
   createdAt              DateTime                       @default(now()) @map("created_at")

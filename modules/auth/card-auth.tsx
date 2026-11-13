@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -19,6 +19,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FaGoogle } from "react-icons/fa";
 import { useToast } from "@/hooks/toast";
 import { submitLogin } from "@/app/(auth)/login/actions";
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 
 export function CardLogin() {
   const {
@@ -35,13 +37,16 @@ export function CardLogin() {
   const onSubmit = async (data: loginSchema) => {
     const result = await submitLogin(data);
 
-    if (!result.success) {
+    if (result.success) {
       showToast(result.message ?? "SUCCESS");
       reset();
     } else {
       showToast(result.message ?? "Email Or Password Wrong");
     }
   };
+
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
@@ -50,14 +55,21 @@ export function CardLogin() {
           Enter Your Email And Password Bellow To Your Account
         </CardDescription>
         <CardAction>
-          <Button variant="link" className="cursor-pointer">
+          <Link
+            href={"/register"}
+            className={buttonVariants({
+              variant: "link",
+              className: "cursor-pointer",
+            })}
+          >
             Sign Up for Free
-          </Button>
+          </Link>
         </CardAction>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} id="loginForm">
           <div className="flex flex-col gap-6">
+            {/* email */}
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -67,15 +79,14 @@ export function CardLogin() {
                 {...register("email")}
                 placeholder="email"
               />
-              {/* email */}
               {errors.email && (
                 <p role="alert" className="ml-3 mb-2 text-red-600 text-sm mt-1">
                   {errors.email?.message}
                 </p>
               )}
             </div>
+            {/* password */}
             <div className="grid gap-2">
-              {/* password */}
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
                 <Link
@@ -85,12 +96,21 @@ export function CardLogin() {
                   Forgot your password
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                placeholder="password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={!showPassword ? "password" : "text"}
+                  {...register("password")}
+                  placeholder="password"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-200 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <Eye /> : <EyeOff />}
+                </button>
+              </div>
               {errors.password && (
                 <p role="alert" className="ml-3 mb-2 text-red-600 text-sm mt-1">
                   {errors.password?.message}
@@ -110,10 +130,15 @@ export function CardLogin() {
           type="submit"
           className="w-full cursor-pointer"
           variant="outline"
+          form="loginForm"
         >
           Sign In To SportsHub
         </Button>
-        <Button variant="outline" className="w-full cursor-pointer">
+        <Button
+          variant="outline"
+          className="w-full cursor-pointer"
+          type="button"
+        >
           Continue With Google <FaGoogle />
         </Button>
       </CardFooter>

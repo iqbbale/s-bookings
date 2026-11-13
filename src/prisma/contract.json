@@ -4271,7 +4271,7 @@
                 }
               },
               "name": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "sql/varchar@1",
                   "kind": "scalar",
@@ -4281,7 +4281,7 @@
                 }
               },
               "passwordHash": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "sql/varchar@1",
                   "kind": "scalar",
@@ -4291,7 +4291,7 @@
                 }
               },
               "phone": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "sql/varchar@1",
                   "kind": "scalar",
@@ -8243,7 +8243,7 @@
                 "name": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
-                  "nullable": false,
+                  "nullable": true,
                   "typeParams": {
                     "length": 150
                   }
@@ -8251,7 +8251,7 @@
                 "password_hash": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
-                  "nullable": false,
+                  "nullable": true,
                   "typeParams": {
                     "length": 100
                   }
@@ -8259,7 +8259,7 @@
                 "phone": {
                   "codecId": "sql/varchar@1",
                   "dataType": "pg/varchar",
-                  "nullable": false,
+                  "nullable": true,
                   "typeParams": {
                     "length": 20
                   }
@@ -8517,7 +8517,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "fe33fda51773c7c702a4d7372c8ff73bdefc099a6820c7b334cae2d329c47a48"
+    "storageHash": "cddd8463de5d760540d994d88692ad2f6c97037efc4e0bed000ac42a699c6469"
   },
   "execution": {
     "executionHash": "7d88b875da1327a2e34a4dfd01b361835bfa0c84fa72e65d1387ddb678dc727c",

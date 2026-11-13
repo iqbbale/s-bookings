@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'fe33fda51773c7c702a4d7372c8ff73bdefc099a6820c7b334cae2d329c47a48'>;
+  StorageHashBase<'cddd8463de5d760540d994d88692ad2f6c97037efc4e0bed000ac42a699c6469'>;
 export type ExecutionHash =
   ExecutionHashBase<'7d88b875da1327a2e34a4dfd01b361835bfa0c84fa72e65d1387ddb678dc727c'>;
 export type ProfileHash =
@@ -3626,21 +3626,21 @@ type ContractBase = Omit<
                 readonly name: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
+                  readonly nullable: true;
                   readonly typeParams: { readonly length: 150 };
                   readonly many: false;
                 };
                 readonly password_hash: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
+                  readonly nullable: true;
                   readonly typeParams: { readonly length: 100 };
                   readonly many: false;
                 };
                 readonly phone: {
                   readonly dataType: 'pg/varchar';
                   readonly codecId: 'sql/varchar@1';
-                  readonly nullable: false;
+                  readonly nullable: true;
                   readonly typeParams: { readonly length: 20 };
                   readonly many: false;
                 };
@@ -6364,7 +6364,7 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
               readonly name: {
-                readonly nullable: false;
+                readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
                   readonly codecId: 'sql/varchar@1';
@@ -6372,7 +6372,7 @@ type ContractBase = Omit<
                 };
               };
               readonly passwordHash: {
-                readonly nullable: false;
+                readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
                   readonly codecId: 'sql/varchar@1';
@@ -6380,7 +6380,7 @@ type ContractBase = Omit<
                 };
               };
               readonly phone: {
-                readonly nullable: false;
+                readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
                   readonly codecId: 'sql/varchar@1';

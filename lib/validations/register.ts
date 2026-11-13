@@ -1,11 +1,7 @@
 import { z } from "zod";
 
-export const register = z
+export const registration = z
   .object({
-    name: z
-      .string()
-      .min(1, "Name must contain at least 1 letter")
-      .max(150, "Name Overated"),
     email: z
       .email({
         pattern:
@@ -14,7 +10,6 @@ export const register = z
       })
       .min(1, "Email must filled")
       .max(255, "Email writter over maximum"),
-    phone: z.string().min(1, "Must Filled").max(20, "Phone number overated"),
     passwordHash: z
       .string()
       .min(1, "Password must filled")
@@ -25,14 +20,11 @@ export const register = z
     confirmPassword: z
       .string()
       .min(2, "Password must filled")
-      .max(100, "Password overrated")
-      .regex(/[A-Z]/, "Must contain at least 1 uppercase letter")
-      .regex(/[a-z]/, "Must contain at least 1 lowercase letter")
-      .regex(/[0-9]/, "Must contain at least 1 number"),
+      .max(100, "Password overrated"),
   })
   .refine((data) => data.passwordHash === data.confirmPassword, {
-    message: "One of them wrong",
+    message: "Password confirm doesn't match",
     path: ["confirmPassword"],
   });
 
-export type registerSchema = z.infer<typeof register>;
+export type registerSchema = z.infer<typeof registration>;
