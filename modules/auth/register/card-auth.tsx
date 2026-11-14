@@ -17,9 +17,9 @@ import { registration, type registerSchema } from "@/lib/validations/register";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/toast";
-import { submitLogin } from "@/app/(auth)/login/actions";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
+import { submitRegister } from "@/app/(auth)/register/actions";
 
 export function CardRegister() {
   const {
@@ -34,7 +34,7 @@ export function CardRegister() {
   const { message, showToast } = useToast();
 
   const onSubmit = async (data: registerSchema) => {
-    const result = await submitLogin(data);
+    const result = await submitRegister(data);
 
     if (result.success) {
       showToast(result.message ?? "Register Success");
@@ -72,15 +72,18 @@ export function CardRegister() {
             {/* email */}
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-
-              <Input
-                id="email"
-                type="text"
-                autoComplete="off"
-                required
-                {...register("email")}
-                placeholder="email"
-              />
+              <div className="relative">
+                <Mail className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
+                <Input
+                  id="email"
+                  type="text"
+                  autoComplete="off"
+                  required
+                  {...register("email")}
+                  placeholder="blublub@gmail.com"
+                  className="pl-9"
+                />
+              </div>
               {errors.email && (
                 <p role="alert" className="ml-3 mb-2 text-red-600 text-sm mt-1">
                   {errors.email?.message}
@@ -98,7 +101,7 @@ export function CardRegister() {
                   type={showPassword ? "password" : "text"}
                   autoComplete="off"
                   {...register("passwordHash")}
-                  placeholder="password"
+                  placeholder="********"
                 />
                 <button
                   type="button"
@@ -123,7 +126,7 @@ export function CardRegister() {
                   type={showConfirmPassword ? "password" : "text"}
                   autoComplete="off"
                   {...register("confirmPassword")}
-                  placeholder="Confirm password"
+                  placeholder="********"
                 />
                 <button
                   type="button"
@@ -151,7 +154,7 @@ export function CardRegister() {
       <CardFooter className="flex-col gap-2">
         <Button
           type="submit"
-          className="w-full cursor-pointer"
+          className="w-full cursor-pointer bg-[#10B981]"
           variant="outline"
           form="registerForm"
         >

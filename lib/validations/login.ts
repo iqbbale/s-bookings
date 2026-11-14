@@ -8,11 +8,14 @@ export const login = z.object({
       error: "Failed, check your email again",
     })
     .min(1, "Email Must Filled")
-    .max(255, "Email writter over maximum"),
+    .max(255, "Email writter over maximum")
+    .toLowerCase()
+    .trim(),
   password: z
     .string()
     .min(1, "Password Must Filled")
-    .max(100, "Password overated"),
+    .max(100, "Password overated")
+    .trim(),
 });
 
 export type loginSchema = z.infer<typeof login>;
